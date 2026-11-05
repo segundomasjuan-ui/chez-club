@@ -1,0 +1,29 @@
+# Chez Club · control de caché (Cloudflare Pages)
+# Páginas con datos en vivo: NUNCA cachear (mata el caché del WebView de Instagram)
+/housemembers
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+/housemembers.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+/ruleta
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+/ruleta.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+/brandambassadors
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+/brandambassadors.html
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  Pragma: no-cache
+  Expires: 0
+# Resto del sitio: revalidar siempre (deploys nuevos se ven al toque)
+/*
+  Cache-Control: no-cache, must-revalidate
