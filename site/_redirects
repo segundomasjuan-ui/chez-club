@@ -1,0 +1,4 @@
+# Chez Club · redirecciones (Cloudflare Pages)
+# The Phantom Gala terminó: links viejos (bio, QR, historias) van a Secrets
+/thephantomgala       /secrets  301
+/thephantomgala.html  /secrets  301
