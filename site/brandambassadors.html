@@ -379,6 +379,7 @@ function wireTab(editable){
       const ef=($('.pfEntComp',pForm)||{}).files, bf=($('.pfBotComp',pForm)||{}).files;
       const items=[]; pForm.querySelectorAll('.pfgrow').forEach(r=>{ const nm=$('.pgn',r).value.trim(), dn=$('.pgd',r).value.trim(); if(nm.length>=2) items.push({nombre:nm,dni:dn}); });
       const editId=pForm.dataset.edit?Number(pForm.dataset.edit):0;
+      if(!editId){ var _ex=((S.nightData&&S.nightData.previas)||[]); if(_ex.length){ var _pp=_ex.reduce(function(a,x){return a+(Number(x.pax)||0);},0); if(!confirm('⚠️ Ya hay '+_ex.length+' previa'+(_ex.length>1?'s':'')+' cargada'+(_ex.length>1?'s':'')+' para esta noche ('+_pp+' personas). ¿Cargar otra igual?')) return; } }
       spin(true);
       try{
         let eu=null,bu=null;

@@ -186,7 +186,7 @@
   .mesa .mtiers li b{color:var(--gold);font-weight:600}
   .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(74,0,6,.3);border-top-color:var(--dark);border-radius:50%;animation:spin .7s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-</style>
+.tipo{display:inline-block;font-size:9px;padding:1px 6px;border-radius:20px;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;white-space:nowrap}.tipo.influencer{background:rgba(180,120,255,.22);color:#cdacff;border:1px solid rgba(180,120,255,.5)}.tipo.marca{background:rgba(76,175,125,.22);color:#7fe0a8;border:1px solid rgba(76,175,125,.5)}</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -302,6 +302,8 @@
   <h3 id="pvTitle">Nueva previa</h3>
   <label>Titular — nombre y apellido</label><input id="pvTit" type="text">
   <label>DNI del titular</label><input id="pvDni" type="tel" inputmode="numeric">
+  <label>Tipo de previa</label>
+  <select id="pvTipo"><option value="comun">Común</option><option value="influencer">Influencer</option><option value="marca">Marca</option></select>
   <div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:14px 0 2px;border-top:1px solid rgba(218,150,99,.25);padding-top:12px">Entradas</div>
   <label>Monto ($)</label><input id="pvEntMonto" type="tel" inputmode="numeric">
   <label>Descripción</label><input id="pvEntDesc" type="text" placeholder="Ej: 10 entradas">
@@ -407,7 +409,7 @@
     if(FORCE_NIGHT){ applyForceNight(); return; }
     rpc('get_noches_puerta',{p_pin:PIN}).then(function(res){
       if(!res.ok) return; NIGHTS=res.noches||[];
-      if(NIGHTS.length && !CUR) CUR=NIGHTS[0].fecha;
+      if(NIGHTS.length && (!CUR || !NIGHTS.some(function(n){return n.fecha===CUR;}))) CUR=NIGHTS[0].fecha;
       drawNights(); loadSub();
     });
   }
@@ -793,6 +795,7 @@
     loadPrevias();
   }
   function loadPrevias(){ rpc('get_previas',{p_pin:PIN,p_fecha:CUR}).then(function(res){ if(res.ok){ PREVIAS=res.previas||[]; drawPrevias(); loadTotales(); } }); }
+  function tipoBadgeP(t){ if(t!=='influencer'&&t!=='marca') return ''; return ' <span class="tipo '+t+'">'+(t==='influencer'?'Influencer':'Marca')+'</span>'; }
   function drawPrevias(){
     var box=document.getElementById('previaList'); if(!box) return; box.innerHTML='';
     if(!PREVIAS.length){ box.innerHTML='<div class="empty">No hay previas cargadas.</div>'; return; }
@@ -808,7 +811,7 @@
         return '<div class="pvg'+(g.llego?' in':'')+'" data-gid="'+g.id+'"><div class="info"><div class="nom">'+esc(g.nombre)+'</div><div class="meta">'+(g.dni?esc(g.dni):'sin DNI')+(g.llego?(' · llegó '+esc(g.hora)):'')+'</div></div><button class="chk">'+(g.llego?'✓':'')+'</button></div>';
       }).join('');
       d.innerHTML=
-        '<div class="pvhead"><div class="pvname"><div class="t">'+esc(p.titular)+(p.titular_dni?(' · '+esc(p.titular_dni)):'')+'</div><div class="m">'+money(p.monto)+'</div></div>'+
+        '<div class="pvhead"><div class="pvname"><div class="t">'+esc(p.titular)+(p.titular_dni?(' · '+esc(p.titular_dni)):'')+tipoBadgeP(p.tipo)+'</div><div class="m">'+money(p.monto)+'</div></div>'+
           '<div class="pvcount">'+p.ingresados+'/'+p.total+'</div><span class="arrow">▶</span></div>'+
         '<div class="pvbody">'+
           (((Number(p.ent_monto)||0)||(Number(p.bot_monto)||0)||p.ent_desc||p.bot_desc||p.ent_comp_url||p.bot_comp_url)?(
@@ -844,7 +847,7 @@
   function pvTotalUpd(){ var e=parseInt((document.getElementById('pvEntMonto').value||'').replace(/[^0-9]/g,''),10)||0, b=parseInt((document.getElementById('pvBotMonto').value||'').replace(/[^0-9]/g,''),10)||0; var t=document.getElementById('pvTotal'); if(t) t.textContent=money(e+b); }
   function openPreviaNew(){
     pvEditId=null; document.getElementById('pvTitle').textContent='Nueva previa';
-    document.getElementById('pvTit').value=''; document.getElementById('pvDni').value='';
+    document.getElementById('pvTit').value=''; document.getElementById('pvDni').value=''; document.getElementById('pvTipo').value='comun';
     document.getElementById('pvEntMonto').value=''; document.getElementById('pvEntDesc').value=''; document.getElementById('pvEntComp').value='';
     document.getElementById('pvBotMonto').value=''; document.getElementById('pvBotDesc').value=''; document.getElementById('pvBotComp').value='';
     document.getElementById('pvEntCur').innerHTML=''; document.getElementById('pvBotCur').innerHTML='';
@@ -854,7 +857,7 @@
   }
   function openPreviaEdit(p){
     pvEditId=p.id; document.getElementById('pvTitle').textContent='Editar previa';
-    document.getElementById('pvTit').value=p.titular||''; document.getElementById('pvDni').value=p.titular_dni||'';
+    document.getElementById('pvTit').value=p.titular||''; document.getElementById('pvDni').value=p.titular_dni||''; document.getElementById('pvTipo').value=p.tipo||'comun';
     document.getElementById('pvEntMonto').value=(Number(p.ent_monto)||''); document.getElementById('pvEntDesc').value=p.ent_desc||'';
     document.getElementById('pvBotMonto').value=(Number(p.bot_monto)||''); document.getElementById('pvBotDesc').value=p.bot_desc||'';
     document.getElementById('pvEntComp').value=''; document.getElementById('pvBotComp').value='';
@@ -880,6 +883,7 @@
   document.getElementById('pvSave').onclick=async function(){
     var tit=document.getElementById('pvTit').value.trim();
     if(tit.length<2){ alert('Falta el titular'); return; }
+    if(!pvEditId && PREVIAS && PREVIAS.length){ var _pp=PREVIAS.reduce(function(a,x){return a+(Number(x.total)||0);},0); if(!confirm('⚠️ Esta noche YA tiene '+PREVIAS.length+' previa'+(PREVIAS.length>1?'s':'')+' cargada'+(PREVIAS.length>1?'s':'')+' ('+_pp+' personas). ¿Cargar otra igual?')) return; }
     var dni=document.getElementById('pvDni').value.trim();
     var entM=parseInt((document.getElementById('pvEntMonto').value||'').replace(/[^0-9]/g,''),10)||0;
     var botM=parseInt((document.getElementById('pvBotMonto').value||'').replace(/[^0-9]/g,''),10)||0;
@@ -895,7 +899,7 @@
       var eu='', bu='', en='', bn='';
       try{ if(ef&&ef[0]){ eu=await subirCompPuerta('puerta/'+CUR+'-preventr-'+Date.now()+'.'+((ef[0].name.split('.').pop()||'dat').toLowerCase()),ef[0]); en=ef[0].name; } }catch(x){}
       try{ if(bf&&bf[0]){ bu=await subirCompPuerta('puerta/'+CUR+'-prevbot-'+Date.now()+'.'+((bf[0].name.split('.').pop()||'dat').toLowerCase()),bf[0]); bn=bf[0].name; } }catch(x){}
-      var args={p_pin:PIN,p_titular:tit,p_dni:dni,
+      var args={p_pin:PIN,p_titular:tit,p_dni:dni,p_tipo:(document.getElementById('pvTipo').value||'comun'),
         p_ent_monto:entM,p_ent_desc:entD,p_ent_comp_url:eu,p_ent_comp_nombre:en,
         p_bot_monto:botM,p_bot_desc:botD,p_bot_comp_url:bu,p_bot_comp_nombre:bn,p_items:items};
       var r;
