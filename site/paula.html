@@ -71,6 +71,19 @@
   #nResumen .rlabel{opacity:.72}
   #nResumen .pv{font-size:12.5px;padding:5px 0;border-top:1px solid rgba(218,150,99,.14);display:flex;justify-content:space-between;gap:8px;align-items:center}
   #nResumen .pvhead{font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.6;margin-top:10px}
+  .rstats{display:flex;gap:8px;margin:12px 0 6px}
+  .rstat{flex:1;background:rgba(218,150,99,.12);border:1px solid rgba(218,150,99,.35);border-radius:10px;padding:12px 6px;text-align:center}
+  .rstat .rnum{font-size:28px;font-weight:700;color:var(--gold);line-height:1}
+  .rstat .rlbl{font-size:9.5px;opacity:.8;margin-top:5px;letter-spacing:.02em;line-height:1.2}
+  #nResumen .rsub{font-size:11px;opacity:.7;margin:2px 0 6px}
+  .nGateBox{background:rgba(224,122,63,.14);border:1px solid rgba(224,122,63,.6);border-radius:10px;padding:16px;margin:14px 0;text-align:center}
+  .nGateBox .nGateIco{font-size:30px}
+  .nGateBox .nGateTx{font-size:14px;color:var(--cream);margin:8px 0 14px;line-height:1.45}
+  .nGateBox .nGateBtn{background:var(--gold);color:#3a0206;border:none;border-radius:8px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;width:100%}
+  #nConfig.nconfig{margin-top:14px;border-top:1px solid rgba(218,150,99,.25);padding-top:10px;opacity:.9}
+  #nConfig .ncfgHead{font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.55;margin-bottom:8px}
+  #nConfig label{font-size:11px;opacity:.8}
+  #nConfig input,#nConfig textarea{font-size:13px;padding:7px 9px}
   @media(max-width:640px){ .cal td{height:58px} .cal td .ename{font-size:10.5px} .cal td .est{font-size:8.5px} header .p{font-size:30px} header .mo b{font-size:30px;min-width:110px} }
   /* MODAL */
   .modal{position:fixed;inset:0;background:rgba(10,0,2,.72);display:none;align-items:flex-end;justify-content:center;z-index:50;backdrop-filter:blur(2px)}
@@ -215,7 +228,9 @@
 
 <div class="modal" id="modalNoche"><div class="sheet">
   <h3 id="nTitle">Noche</h3>
+  <div id="nGate"></div>
   <div id="nResumen"></div>
+  <div id="nConfig" class="nconfig"><div class="ncfgHead">Datos de la noche</div>
   <label>Nombre de la noche</label><input id="nNombre" type="text" placeholder="Ej: Viernes 12">
   <div class="row2">
     <div><label>Desde</label><input id="nIni" type="time"></div>
@@ -224,6 +239,7 @@
   <label>Cupo House Members</label><input id="nCupo" type="number" inputmode="numeric" value="20">
   <label>Notas</label><textarea id="nNotas" rows="2" placeholder="Detalles internos de la noche"></textarea>
   <label class="tog"><input type="checkbox" id="nAbierto"> Noche abierta (visible para RSVP y puerta)</label>
+  </div>
   <button class="btn" id="nBol" style="width:100%;margin-top:16px;background:transparent;border:1px solid var(--gold);color:var(--gold);display:none">Cargar boletería de esta noche →</button>
   <div class="acts">
     <button class="del" id="nDel" style="display:none">Eliminar</button>
@@ -393,18 +409,30 @@
       document.getElementById('modalNoche').classList.remove('show'); VIEW='boleteria';
       document.querySelectorAll('#nav button').forEach(function(x){ x.classList.toggle('active',x.getAttribute('data-v')==='boleteria'); });
       renderView(); };
-    var rz=document.getElementById('nResumen'); if(rz) rz.innerHTML='<div style="opacity:.6;font-size:12px;margin-top:12px">Cargando resumen...</div>';
-    rpc('get_resumen_fecha',{p_pin:PIN,p_fecha:fecha}).then(function(r){ if(r&&r.ok&&rz&&nEditFecha===fecha) renderResumenNoche(r,rz); else if(rz&&nEditFecha===fecha) rz.innerHTML=''; });
+    var gate=document.getElementById('nGate'), rz=document.getElementById('nResumen'), cfg=document.getElementById('nConfig');
+    if(gate){ gate.innerHTML=''; gate.style.display='none'; }
+    if(rz){ rz.innerHTML='<div style="opacity:.6;font-size:12px;margin:12px 0">Cargando resumen...</div>'; rz.style.display='block'; }
+    if(cfg) cfg.style.display='none';
+    rpc('get_resumen_fecha',{p_pin:PIN,p_fecha:fecha}).then(function(r){
+      if(nEditFecha!==fecha) return;
+      if(!(r&&r.ok)){ if(rz) rz.style.display='none'; if(cfg) cfg.style.display='block'; return; }
+      renderResumenNoche(r,rz);
+      var cant=(r.previas&&r.previas.cantidad)||0;
+      if(cant>0 && gate){
+        gate.innerHTML=nGateHtml(r); gate.style.display='block'; rz.style.display='none'; if(cfg) cfg.style.display='none';
+        var gb=document.getElementById('nGateBtn'); if(gb) gb.onclick=function(){ gate.style.display='none'; rz.style.display='block'; if(cfg) cfg.style.display='block'; };
+      } else { gate.style.display='none'; rz.style.display='block'; if(cfg) cfg.style.display='block'; }
+    });
     document.getElementById('modalNoche').classList.add('show');
   }
   function tipoBadge(t){ if(t!=='influencer'&&t!=='marca') return ''; t=(t||'comun'); var lbl={comun:'Común',influencer:'Influencer',marca:'Marca'}[t]||'Común'; return '<span class="tipo '+t+'">'+lbl+'</span>'; }
+  function nStat(num,lbl){ return '<div class="rstat"><div class="rnum">'+num+'</div><div class="rlbl">'+lbl+'</div></div>'; }
+  function nGateHtml(r){ var p=r.previas||{}; return '<div class="nGateBox"><div class="nGateIco">⚠️</div><div class="nGateTx"><b>Ya hay '+(p.cantidad||0)+' previa'+((p.cantidad||0)===1?'':'s')+' cargada'+((p.cantidad||0)===1?'':'s')+'</b> para esta noche · '+(p.pax||0)+' persona'+((p.pax||0)===1?'':'s')+' en total. Revisá antes de cargar otra.</div><button type="button" id="nGateBtn" class="nGateBtn">Ver resumen de la noche →</button></div>'; }
   function renderResumenNoche(r, box){
     var p=r.previas||{}, inv=r.invitaciones||{}, lista=p.lista||[]; var h='';
-    if(p.cantidad){ h+='<div class="nAlert">⚠️ Ya hay '+p.cantidad+' previa'+(p.cantidad>1?'s':'')+' cargada'+(p.cantidad>1?'s':'')+' · '+(p.pax||0)+' persona'+((p.pax||0)===1?'':'s')+'. Revisá antes de cargar otra.</div>'; }
-    h+='<div class="rrow"><span class="rlabel">Previas</span><span>'+(p.cantidad||0)+' · '+(p.pax||0)+'p</span></div>';
-    h+='<div class="rrow"><span class="rlabel">Mesas vendidas</span><span>'+(r.mesas_vendidas||0)+'</span></div>';
-    h+='<div class="rrow"><span class="rlabel">Invitaciones</span><span>'+(inv.total||0)+' <span style="opacity:.55">(HM '+(inv.hm||0)+' · Listas '+(inv.listas||0)+')</span></span></div>';
-    if(lista.length){ h+='<div class="pvhead">Previas de la noche</div>'; lista.forEach(function(pv){ h+='<div class="pv"><span>'+esc(pv.titular)+' <span style="opacity:.6">· '+(pv.pax||0)+'p</span></span>'+tipoBadge(pv.tipo)+'</div>'; }); }
+    h+='<div class="rstats">'+nStat((p.pax||0),'Personas en previas')+nStat((r.mesas_vendidas||0),'Mesas vendidas')+nStat((inv.total||0),'Invitaciones')+'</div>';
+    h+='<div class="rsub">'+(p.cantidad||0)+' previa'+((p.cantidad||0)===1?'':'s')+' · Invitaciones: HM '+(inv.hm||0)+' · Listas '+(inv.listas||0)+'</div>';
+    if(lista.length){ h+='<div class="pvhead">Previas de la noche</div>'; lista.forEach(function(pv){ h+='<div class="pv"><span>'+esc(pv.titular)+' <span style="opacity:.6">· '+(pv.pax||0)+' pers</span></span>'+tipoBadge(pv.tipo)+'</div>'; }); }
     box.innerHTML=h;
   }
   document.getElementById('nSave').onclick=function(){
